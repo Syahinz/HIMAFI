@@ -1,0 +1,194 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import { Image } from "astro:assets";
+import ArticleCard from "../../components/articleCard.astro";
+import Paragraph from "../../components/Paragraph.astro";
+import { render } from "astro:content";
+
+
+const parseDate = (str: string) => {
+  const [d, m, y] = str.split("-");
+  return new Date(`${y}-${m}-${d}`);
+};
+const news = await getCollection("news");
+export async function getStaticPaths() {
+  const news = await getCollection("news");
+
+  return news.map((report) => {
+    return {
+      params: { id: report.id },
+      props: { report },
+    };
+  });
+}
+const { report } = Astro.props;
+const {Content} = await render(report);
+const docImages = import.meta.glob<{ default: ImageMetadata }>(
+  "../../assets/images/*.{jpg,jpeg,png,webp}",
+  { eager: true },
+);
+
+const memberImages = import.meta.glob<{ default: ImageMetadata }>(
+  "../../assets/member/*.{jpg,jpeg,png,webp}",
+  { eager: true },
+);
+
+function findImage(
+  glob: Record<string, { default: ImageMetadata }>,
+  name: string,
+) {
+  const entry = Object.entries(glob).find(
+    ([path]) => path.split("/").pop()?.split(".")[0] === name,
+  );
+  return entry?.[1].default;
+}
+
+const formatDate = (str: string) => {
+  const date = parseDate(str);
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+
+const docImg = findImage(docImages, report.data.img);
+const authorImg = findImage(memberImages, report.data.authorPic);
+---
+
+<Layout>
+  <div
+    class="relative w-full h-64 sm:h-80 lg:h-96 overflow-hidden bg-[#1A1A2E]"
+  >
+    <!-- Gambar artikel (ganti path sesuai struktur aset kamu) -->
+
+    {docImg ? <Image src={docImg} alt={report.data.title} class="w-full h-full object-cover opacity-50" onerror="his.style.display='none'"/>
+    : <div class="w-full h-full object-cover opacity-50 bg- " /> <!-- fallback -->
+  }
+
+    <!-- Overlay gradient -->
+    <div
+      class="absolute inset-0 bg-linear-to-t from-[#1A1A2E] via-[#1A1A2E]/40 to-transparent"
+    >
+    </div>
+
+    <!-- Label kategori + judul di atas gambar -->
+    <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-10 max-w-4xl">
+      <span
+        class="inline-block bg-[#E8C547] text-[#1A1A2E] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-sm mb-3"
+      >
+        {report.data.produced}
+      </span>
+      <h1
+        class="font-['Playfair_Display'] text-white text-2xl sm:text-3xl lg:text-4xl font-black leading-tight"
+      >
+        {report.data.title}
+      </h1>
+    </div>
+  </div>
+
+  <!-- ░░ KONTEN UTAMA ░░ -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col lg:flex-row gap-10">
+      <!-- ══ KOLOM KIRI: ARTIKEL ══ -->
+      <article class="flex-1 min-w-0">
+        <!-- Meta info penulis -->
+        <div
+          class="flex items-center gap-3 mb-6 pb-6 border-b border-[#1A1A2E]/10"
+        >
+          <!-- Avatar penulis (ganti path sesuai aset) -->
+          <div
+            class="w-10 h-10 rounded-full bg-[#1A1A2E]/10 overflow-hidden shrink-0"
+          >
+        {authorImg ? <Image src={authorImg} alt={report.data.author} class="w-full h-full object-cover" /> : <div class="w-full h-full object-cover" />}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-[#1A1A2E]">
+              {report.data.author}
+            </p>
+            <p class="text-xs text-[#1A1A2E]/50">{report.data.authorTag}</p>
+          </div>
+          <time
+            datetime={report.data.date}
+            class="text-xs text-[#1A1A2E]/50 shrink-0"
+          >
+            {formatDate(report.data.date)}
+          </time>
+        </div>
+
+        <!-- Lead / deskripsi singkat -->
+        <p
+          class="font-['Plus_Jakarta_Sans'] text-base sm:text-lg text-[#1A1A2E]/70 leading-relaxed mb-8 italic border-l-4 border-[#E8C547] pl-4"
+        >
+          {report.data.Description}
+        </p>
+
+        <!-- Konten MDX -->
+        <div
+          class="prose prose-stone max-w-none
+              prose-headings:font-['Playfair_Display'] prose-headings:text-[#1A1A2E]
+              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
+              prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+              prose-p:font-['Plus_Jakarta_Sans'] prose-p:text-[#3A3A4E] prose-p:leading-relaxed prose-p:text-base
+              prose-a:text-[#1A1A2E] prose-a:underline prose-a:decoration-[#E8C547] prose-a:underline-offset-2
+              prose-strong:text-[#1A1A2E] prose-strong:font-semibold
+              prose-blockquote:border-l-[#E8C547] prose-blockquote:text-[#1A1A2E]/60
+              prose-img:rounded-lg prose-img:shadow-md"
+        >
+          <Content/>
+        </div>
+
+        <!-- Footer artikel -->
+        <div
+          class="mt-10 pt-6 border-t border-[#1A1A2E]/10 flex items-center justify-between flex-wrap gap-4"
+        >
+          <div class="flex items-center gap-2 text-sm text-[#1A1A2E]/50">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"></path>
+            </svg>
+            Diproduksi oleh <strong class="text-[#1A1A2E]/70"
+              >{report.data.produced}</strong
+            >
+          </div>
+          <a
+            href="/artikel"
+            class="text-sm font-semibold text-[#1A1A2E] hover:text-[#E8C547] transition-colors flex items-center gap-1"
+          >
+            ← Lihat semua artikel
+          </a>
+        </div>
+      </article>
+
+      <!-- ══ KOLOM KANAN: ARTIKEL LAINNYA ══ -->
+      <aside class="lg:w-80 xl:w-96 shrink-0">
+        <div class="sticky top-20">
+          <div class="flex items-center gap-3 mb-5">
+            <h2
+              class="font-['Playfair_Display'] text-lg font-bold text-[#1A1A2E]"
+            >
+              Artikel Lainnya
+            </h2>
+            <div class="flex-1 h-px bg-[#1A1A2E]/10"></div>
+          </div>
+
+          <div class="flex flex-col gap-4">
+          {news.map((report) => <ArticleCard report={report} />)}
+          {news.length < 1 && <Paragraph text="Ga ada berita kawan " />}
+            </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</Layout>
